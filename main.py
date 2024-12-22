@@ -1,13 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask
 
 app = Flask(__name__)
 
-@app.route('/', methods=['POST'])
-def message():
-    data = request.get_json()
-    if data and 'message' in data:
-        print(f"Message received: {data['message']}")
-        return jsonify({'response': 'Hello from Server'})
-    return jsonify({'error': 'Invalid message'}), 400
+@app.route('/hello', methods=['GET'])
+def hello():
+    return "Hi ESP32!", 200
 
-app.run(host='0.0.0.0', port=80)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=80)
