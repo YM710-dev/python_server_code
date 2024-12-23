@@ -1,4 +1,4 @@
-Flask==2.3.2
-SpeechRecognition==3.9.0
+Flask
+SpeechRecognition
 pyaudio==0.2.13
 wave
