@@ -1,35 +1,37 @@
-from flask import Flask, request
-import wave
-import speech_recognition as sr
+from flask import Flask, request, send_file
+import os
+from datetime import datetime
 
 app = Flask(__name__)
 
-def save_audio(data, filename="received_audio.wav"):
-    with wave.open(filename, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(16000)
-        wf.writeframes(data)
-
-def transcribe_audio(filename):
-    recognizer = sr.Recognizer()
-    try:
-        with sr.AudioFile(filename) as source:
-            audio = recognizer.record(source)
-        return recognizer.recognize_google(audio)
-    except sr.UnknownValueError:
-        return "Could not understand the audio."
-    except Exception as e:
-        return f"Error: {e}"
+# Directory to save audio files
+UPLOAD_DIR = "audio_uploads"
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
 
 @app.route('/audio', methods=['POST'])
-def audio():
-    data = request.data
-    if data.endswith(b"EOF"):
-        data = data[:-3]  # Remove EOF marker
-    save_audio(data)
-    transcription = transcribe_audio("received_audio.wav")
-    return transcription
+def upload_audio():
+    # Save the audio file
+    audio_data = request.data
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    audio_filename = f"{UPLOAD_DIR}/audio_{timestamp}.wav"
+    
+    with open(audio_filename, 'wb') as f:
+        f.write(audio_data)
+    
+    print(f"Audio file saved: {audio_filename}")
 
-if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # TODO: Process the audio here (e.g., transcription)
+    # For now, just return a placeholder response
+    return "Could not understand the audio."
+
+@app.route('/audio/<filename>', methods=['GET'])
+def get_audio(filename):
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(filepath):
+        return send_file(filepath, as_attachment=False)
+    else:
+        return "File not found.", 404
+
+if __name__ == '__main__':
+    app.run(debug=True)
