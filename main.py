@@ -6,6 +6,9 @@ import speech_recognition as sr
 
 app = Flask(__name__)
 
+# Initialize a buffer to accumulate audio data
+audio_chunks = []
+
 # Save audio data into an in-memory file-like object
 def save_audio_in_memory(data):
     try:
@@ -35,16 +38,18 @@ def transcribe_audio(audio_buffer):
 
 @app.route('/hello', methods=['POST'])
 def hello():
+    global audio_chunks
+
     try:
-        # Get Base64-encoded audio data from the request
+        # Get the data from the request
         base64_audio = request.data.decode('utf-8')
 
         if base64_audio == "EOF":
-            return "End of audio received."
+            # Decode all accumulated Base64 chunks
+            audio_data = b"".join(base64.b64decode(chunk) for chunk in audio_chunks)
 
-        if base64_audio:
-            # Decode Base64 to raw binary data
-            audio_data = base64.b64decode(base64_audio)
+            # Clear the buffer for future requests
+            audio_chunks = []
 
             # Save the audio data in memory
             audio_buffer = save_audio_in_memory(audio_data)
@@ -52,10 +57,15 @@ def hello():
                 transcription = transcribe_audio(audio_buffer)
             else:
                 transcription = "Error saving audio."
-        else:
-            transcription = "No audio data received."
 
-        return transcription  # Return the transcription as the response
+            return transcription  # Return the transcription as the response
+
+        if base64_audio:
+            # Add the received chunk to the buffer
+            audio_chunks.append(base64_audio)
+            return "Chunk received."
+
+        return "No audio data received."
     except Exception as e:
         return f"Server error: {e}"
 
