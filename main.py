@@ -1,21 +1,20 @@
-import os
+from flask import Flask, request
 import wave
 import speech_recognition as sr
-from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Save received audio
 def save_audio(data, filename="received_audio.wav"):
     try:
-        with open(filename, "wb") as f:
-            f.write(data)
+        with wave.open(filename, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(16000)
+            wf.writeframes(data)
         return filename
     except Exception as e:
-        print(f"Error saving audio: {e}")
-        return None
+        return f"Error saving audio: {e}"
 
-# Transcribe audio using SpeechRecognition
 def transcribe_audio(filename):
     try:
         with sr.AudioFile(filename) as source:
@@ -26,30 +25,16 @@ def transcribe_audio(filename):
     except Exception as e:
         return f"Error: {e}"
 
-# Play received audio (for testing)
-def play_audio(filename):
-    os.system(f"aplay {filename}")  # Linux command to play audio, adjust for your OS
-
 @app.route('/upload', methods=['POST'])
 def upload_audio():
-    if request.method == 'POST':
-        print("Receiving audio file...")
-        audio_data = request.data  # Get the binary data of the audio
-        if audio_data:
-            filename = save_audio(audio_data)
-            if filename:
-                print(f"Audio saved to {filename}")
-                transcription = transcribe_audio(filename)
-                print(f"Transcription: {transcription}")
+    audio_data = request.data
+    print(f"Received {len(audio_data)} bytes of audio data")
 
-                # Play the received audio (Optional)
-                play_audio(filename)
+    # Save the audio data to a file
+    audio_file = save_audio(audio_data)
+    transcription = transcribe_audio(audio_file) if audio_file else "Error saving audio."
 
-                return jsonify({"transcription": transcription}), 200
-            else:
-                return jsonify({"error": "Error saving audio."}), 400
-        else:
-            return jsonify({"error": "No audio data received."}), 400
+    return transcription  # Return transcription result to ESP32
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
