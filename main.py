@@ -1,4 +1,3 @@
-import os
 import wave
 import speech_recognition as sr
 from flask import Flask, request, jsonify
