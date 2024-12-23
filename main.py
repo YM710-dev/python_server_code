@@ -1,37 +1,39 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, jsonify, send_file
 import os
-from datetime import datetime
 
 app = Flask(__name__)
 
 # Directory to save audio files
-UPLOAD_DIR = "audio_uploads"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+AUDIO_SAVE_PATH = "./audio_files"
+os.makedirs(AUDIO_SAVE_PATH, exist_ok=True)
 
 @app.route('/audio', methods=['POST'])
-def upload_audio():
-    # Save the audio file
-    audio_data = request.data
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    audio_filename = f"{UPLOAD_DIR}/audio_{timestamp}.wav"
-    
-    with open(audio_filename, 'wb') as f:
-        f.write(audio_data)
-    
-    print(f"Audio file saved: {audio_filename}")
+def receive_audio():
+    try:
+        # Save the incoming audio file
+        audio_file_path = os.path.join(AUDIO_SAVE_PATH, "recorded_audio.wav")
 
-    # TODO: Process the audio here (e.g., transcription)
-    # For now, just return a placeholder response
-    return "Could not understand the audio."
+        with open(audio_file_path, "wb") as f:
+            f.write(request.data)
 
-@app.route('/audio/<filename>', methods=['GET'])
-def get_audio(filename):
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    if os.path.exists(filepath):
-        return send_file(filepath, as_attachment=False)
+        print(f"Audio file saved at: {audio_file_path}")
+
+        # Return response for debugging
+        return jsonify({"message": "Audio received", "file_path": audio_file_path})
+
+    except Exception as e:
+        print(f"Error receiving audio: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/audio/play', methods=['GET'])
+def play_audio():
+    audio_file_path = os.path.join(AUDIO_SAVE_PATH, "recorded_audio.wav")
+    if os.path.exists(audio_file_path):
+        return send_file(audio_file_path, as_attachment=True)
     else:
-        return "File not found.", 404
+        return jsonify({"error": "Audio file not found"}), 404
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
