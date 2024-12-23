@@ -25,16 +25,20 @@ def transcribe_audio(filename):
     except Exception as e:
         return f"Error: {e}"
 
-@app.route('/upload', methods=['POST'])
-def upload_audio():
-    audio_data = request.data
-    print(f"Received {len(audio_data)} bytes of audio data")
+@app.route('/hello', methods=['POST'])
+def hello():
+    data = bytearray()
+    message = request.data.decode()
+    while message and message != b"EOF":
+        data.extend(message)
+        message = request.data.decode()
 
-    # Save the audio data to a file
-    audio_file = save_audio(audio_data)
-    transcription = transcribe_audio(audio_file) if audio_file else "Error saving audio."
-
-    return transcription  # Return transcription result to ESP32
+    if data:
+        audio_file = save_audio(data)
+        transcription = transcribe_audio(audio_file) if audio_file else "Error saving audio."
+    else:
+        transcription = "No audio data received."
+    return transcription  # Respond with a simple message
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
