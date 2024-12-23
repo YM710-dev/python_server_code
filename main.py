@@ -1,40 +1,56 @@
 from flask import Flask, request
 import wave
+import io
 import speech_recognition as sr
 
 app = Flask(__name__)
 
-def save_audio(data, filename="received_audio.wav"):
+# Save audio data into an in-memory file-like object
+def save_audio_in_memory(data):
     try:
-        with wave.open(filename, "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)
-            wf.setframerate(16000)
+        audio_buffer = io.BytesIO()
+        with wave.open(audio_buffer, "wb") as wf:
+            wf.setnchannels(1)  # Mono channel
+            wf.setsampwidth(2)  # 16-bit audio
+            wf.setframerate(16000)  # Sample rate
             wf.writeframes(data)
-        return filename
+        audio_buffer.seek(0)  # Reset the pointer to the start of the file
+        return audio_buffer
     except Exception as e:
-        return f"Error saving audio: {e}"
+        print(f"Error saving audio: {e}")
+        return None
 
-def transcribe_audio(filename):
+# Transcribe the audio from the in-memory file-like object
+def transcribe_audio(audio_buffer):
+    recognizer = sr.Recognizer()
     try:
-        with sr.AudioFile(filename) as source:
-            audio = sr.Recognizer().record(source)
-        return sr.Recognizer().recognize_google(audio)
+        with sr.AudioFile(audio_buffer) as source:
+            audio = recognizer.record(source)
+        return recognizer.recognize_google(audio)
     except sr.UnknownValueError:
         return "Could not understand the audio."
     except Exception as e:
         return f"Error: {e}"
 
-@app.route('/upload', methods=['POST'])
-def upload_audio():
-    audio_data = request.data
-    print(f"Received {len(audio_data)} bytes of audio data")
+@app.route('/hello', methods=['POST'])
+def hello():
+    try:
+        # Get raw binary data from the request
+        audio_data = request.data
 
-    # Save the audio data to a file
-    audio_file = save_audio(audio_data)
-    transcription = transcribe_audio(audio_file) if audio_file else "Error saving audio."
+        if audio_data:
+            # Save the audio data in memory
+            audio_buffer = save_audio_in_memory(audio_data)
+            if audio_buffer:
+                transcription = transcribe_audio(audio_buffer)
+            else:
+                transcription = "Error saving audio."
+        else:
+            transcription = "No audio data received."
 
-    return transcription  # Return transcription result to ESP32
+        return transcription  # Return the transcription as the response
+    except Exception as e:
+        return f"Server error: {e}"
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
