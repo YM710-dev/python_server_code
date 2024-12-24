@@ -5,22 +5,17 @@ app = Flask(__name__)
 @app.route('/receive-file', methods=['POST'])
 def receive_file():
     try:
-        # Check if the file is in the request
         if 'file' not in request.files:
             return "No file part", 400
 
         file = request.files['file']
-
         if file.filename == '':
             return "No selected file", 400
 
-        # Read the file content
         file_content = file.read().decode('utf-8')
         print(f"Received file content: {file_content}")
 
-        # Send the content back to ESP32 as the response
         return file_content, 200
-
     except Exception as e:
         print(f"Error: {e}")
         return "Error processing file", 500
