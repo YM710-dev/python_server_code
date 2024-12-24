@@ -1,3 +1,2 @@
 Flask
 SpeechRecognition
-wave
