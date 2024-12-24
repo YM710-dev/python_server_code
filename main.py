@@ -1,30 +1,34 @@
 from flask import Flask, request
-import os
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = 'uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-@app.route('/receive-audio', methods=['POST'])
-def receive_audio():
+@app.route('/receive-txt', methods=['POST'])
+def receive_txt():
     try:
-        # Check if 'file' is part of the form data
+        # Check if a file was sent
         if 'file' not in request.files:
-            return "No file part", 400
-
+            return "No file part in the request", 400
+        
         file = request.files['file']
-        if file:
-            file_path = os.path.join(UPLOAD_FOLDER, 'received_audio.wav')
-            file.save(file_path)
-            print(f"Received WAV file saved as {file_path}")
-            return "Success", 200
-        else:
-            return "No file received", 400
+
+        # Save the file to disk
+        file_path = f"received_{file.filename}"
+        file.save(file_path)
+        print(f"File saved as: {file_path}")
+
+        # Read the content of the file
+        with open(file_path, "r") as f:
+            content = f.read()
+        print(f"File content: {content}")
+
+        # Modify the content (append a response)
+        modified_content = f"{content}\nServer: File processed successfully!"
+
+        # Return the modified content to the ESP32
+        return modified_content, 200
     except Exception as e:
         print(f"Error: {e}")
-        return "Error", 500
+        return "Error processing the file", 500
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
