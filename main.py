@@ -1,28 +1,17 @@
 from flask import Flask, request
-import wave
-import os
 import speech_recognition as sr
+import os
 
 app = Flask(__name__)
 
 @app.route('/receive-audio', methods=['POST'])
 def receive_audio():
     try:
-        # Save the received audio file
-        audio_file = "received_audio.raw"
-        with open(audio_file, "wb") as f:
-            f.write(request.data)
-        print(f"Received audio file saved as {audio_file}")
-
-        # Convert RAW to WAV
+        # Save the received WAV file
         wav_file = "received_audio.wav"
-        with wave.open(wav_file, "wb") as wav:
-            wav.setnchannels(1)  # Mono
-            wav.setsampwidth(2)  # 16-bit audio
-            wav.setframerate(16000)  # Sample rate
-            with open(audio_file, "rb") as raw:
-                wav.writeframes(raw.read())
-        print(f"Converted RAW file to WAV: {wav_file}")
+        with open(wav_file, "wb") as f:
+            f.write(request.data)
+        print(f"Received WAV file saved as {wav_file}")
 
         # Transcribe the WAV file
         recognizer = sr.Recognizer()
@@ -31,8 +20,7 @@ def receive_audio():
         transcription = recognizer.recognize_google(audio_data)
         print(f"Transcription: {transcription}")
 
-        # Clean up files
-        os.remove(audio_file)
+        # Clean up the file
         os.remove(wav_file)
 
         return transcription, 200
