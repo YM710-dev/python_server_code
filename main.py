@@ -10,6 +10,10 @@ if not os.path.exists(UPLOAD_FOLDER):
 @app.route('/receive-audio', methods=['POST'])
 def receive_audio():
     try:
+        # Check if 'file' is part of the form data
+        if 'file' not in request.files:
+            return "No file part", 400
+
         file = request.files['file']
         if file:
             file_path = os.path.join(UPLOAD_FOLDER, 'received_audio.wav')
