@@ -1,47 +1,44 @@
 from flask import Flask, request
 import wave
+import os
 import speech_recognition as sr
 
 app = Flask(__name__)
 
-def save_audio(data, filename="received_audio.wav"):
+@app.route('/receive-audio', methods=['POST'])
+def receive_audio():
     try:
-        with wave.open(filename, "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)
-            wf.setframerate(16000)
-            wf.writeframes(data)
-        return filename
-    except Exception as e:
-        return f"Error saving audio: {e}"
+        # Save the received audio file
+        audio_file = "received_audio.raw"
+        with open(audio_file, "wb") as f:
+            f.write(request.data)
+        print(f"Received audio file saved as {audio_file}")
 
-def transcribe_audio(filename):
-    try:
+        # Convert RAW to WAV
+        wav_file = "received_audio.wav"
+        with wave.open(wav_file, "wb") as wav:
+            wav.setnchannels(1)  # Mono
+            wav.setsampwidth(2)  # 16-bit audio
+            wav.setframerate(16000)  # Sample rate
+            with open(audio_file, "rb") as raw:
+                wav.writeframes(raw.read())
+        print(f"Converted RAW file to WAV: {wav_file}")
+
+        # Transcribe the WAV file
         recognizer = sr.Recognizer()
-        with sr.AudioFile(filename) as source:
-            audio = recognizer.record(source)
-        return recognizer.recognize_google(audio)
-    except sr.UnknownValueError:
-        return "Could not understand the audio."
+        with sr.AudioFile(wav_file) as source:
+            audio_data = recognizer.record(source)
+        transcription = recognizer.recognize_google(audio_data)
+        print(f"Transcription: {transcription}")
+
+        # Clean up files
+        os.remove(audio_file)
+        os.remove(wav_file)
+
+        return transcription, 200
     except Exception as e:
-        return f"Error: {e}"
-
-@app.route('/hello', methods=['POST'])
-def hello():
-    message = request.data
-    if message == b"EOF":
-        print("Received EOF. No more data expected.")
-        return "EOF received"
-
-    print("Received audio data. Processing...")
-    filename = save_audio(message)
-    if isinstance(filename, str) and filename.startswith("Error"):
-        print(filename)
-        return filename, 500
-
-    transcription = transcribe_audio(filename)
-    print(f"Transcription: {transcription}")
-    return transcription
+        print(f"Error: {e}")
+        return f"Error: {e}", 500
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000)
