@@ -2,21 +2,21 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-@app.route('/upload', methods=['POST'])
-def upload():
+@app.route('/receive-file', methods=['POST'])
+def receive_file():
     try:
-        file = request.data  # Receive raw file content
-        with open("received_file.txt", "wb") as f:
-            f.write(file)
-        print("File received and saved as received_file.txt")
+        # Receive file
+        file = request.files['file']
+        file_content = file.read().decode('utf-8')
+        
+        # Print the file content received from ESP32
+        print(f"Received file content: {file_content}")
 
-        # Read the file content and send it back
-        with open("received_file.txt", "r") as f:
-            content = f.read()
-        return content, 200
+        # Send the content back to ESP32 as the response
+        return file_content, 200
     except Exception as e:
         print(f"Error: {e}")
-        return f"Error: {e}", 500
+        return "Error processing file", 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
