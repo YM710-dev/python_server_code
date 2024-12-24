@@ -1,25 +1,29 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
+UPLOAD_FOLDER = './uploaded_files'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 @app.route('/receive-file', methods=['POST'])
 def receive_file():
-    try:
-        if 'file' not in request.files:
-            return "No file part", 400
+    if 'file' not in request.files:
+        return "No file part", 400
 
-        file = request.files['file']
-        if file.filename == '':
-            return "No selected file", 400
+    file = request.files['file']
+    if file.filename == '':
+        return "No selected file", 400
 
-        file_content = file.read().decode('utf-8')
-        print(f"Received file content: {file_content}")
+    # Save the file
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(file_path)
 
-        # Return the file content back to the ESP32
-        return file_content, 200
-    except Exception as e:
-        print(f"Error: {e}")
-        return "Error processing file", 500
+    # Read the contents of the file
+    with open(file_path, 'r') as f:
+        content = f.read()
 
-if __name__ == "__main__":
+    # Send the content back as the response
+    return jsonify({"message": "File received", "content": content})
+
+if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
