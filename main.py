@@ -15,6 +15,7 @@ def receive_file():
         file_content = file.read().decode('utf-8')
         print(f"Received file content: {file_content}")
 
+        # Return the file content back to the ESP32
         return file_content, 200
     except Exception as e:
         print(f"Error: {e}")
